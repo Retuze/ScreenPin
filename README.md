@@ -2,6 +2,8 @@
 
 Windows 10/11 screenshot-to-pin utility, written in C++23 with Win32 and GDI+.
 
+[![GitHub release](https://img.shields.io/github/v/release/Retuze/ScreenPin)](https://github.com/Retuze/ScreenPin/releases)
+
 <p align="center">
   <img src="resources/app.png" width="96" alt="ScreenPin icon">
 </p>
