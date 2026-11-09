@@ -83,7 +83,8 @@ $command = "call `"$vcvars`" >nul && " +
     "/DUNICODE /D_UNICODE /I `"$srcDir`" /I `"$resourceDir`" " +
     "$sourceArgs app.res /Fe:ScreenPin.exe /link " +
     "/SUBSYSTEM:WINDOWS /ENTRY:wWinMainCRTStartup " +
-    "user32.lib gdi32.lib shell32.lib comdlg32.lib gdiplus.lib ole32.lib"
+    "user32.lib gdi32.lib shell32.lib comdlg32.lib gdiplus.lib ole32.lib " +
+    "advapi32.lib"
 
 Write-Host 'Building ScreenPin (cl.exe + Windows SDK)...' -ForegroundColor Cyan
 & cmd.exe /c $command

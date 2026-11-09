@@ -37,6 +37,9 @@ private:
     void createTrayIcon();
     void removeTrayIcon();
     void showTrayMenu();
+    bool isAutoStartEnabled() const;
+    bool setAutoStart(bool enable);
+    void toggleAutoStart();
     void handleCommand(UINT command);
     void notify(const wchar_t* title, const wchar_t* message);
     void shutdown();

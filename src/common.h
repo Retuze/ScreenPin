@@ -61,6 +61,7 @@ inline constexpr UINT kTrayIconId = 1;
 enum MenuCommand : UINT {
     kCmdCapture = 1001,
     kCmdCloseAll,
+    kCmdAutoStart,
     kCmdExit,
 
     kCmdPinCopy = 1101,

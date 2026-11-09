@@ -3,7 +3,86 @@
 #include "overlay.h"
 #include "pin_window.h"
 
+#include <winreg.h>
+
 namespace sp {
+namespace {
+
+constexpr wchar_t kRunKey[] =
+    L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+constexpr wchar_t kRunValue[] = L"ScreenPin";
+
+std::wstring currentExecutablePath() {
+    std::wstring buffer(32768, L'\0');
+    const DWORD length = GetModuleFileNameW(
+        nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+    if (length == 0 || length >= buffer.size()) return {};
+    buffer.resize(length);
+    return buffer;
+}
+
+bool readAutoStartCommand(std::wstring& command) {
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, kRunKey, 0, KEY_QUERY_VALUE, &key) !=
+        ERROR_SUCCESS) {
+        return false;
+    }
+
+    DWORD type = 0;
+    DWORD bytes = 0;
+    LSTATUS status =
+        RegQueryValueExW(key, kRunValue, nullptr, &type, nullptr, &bytes);
+    if (status != ERROR_SUCCESS || type != REG_SZ ||
+        bytes < sizeof(wchar_t)) {
+        RegCloseKey(key);
+        return false;
+    }
+
+    std::wstring value(bytes / sizeof(wchar_t), L'\0');
+    status = RegQueryValueExW(
+        key, kRunValue, nullptr, &type,
+        reinterpret_cast<BYTE*>(value.data()), &bytes);
+    RegCloseKey(key);
+    if (status != ERROR_SUCCESS) return false;
+
+    while (!value.empty() && value.back() == L'\0') value.pop_back();
+    command = std::move(value);
+    return true;
+}
+
+bool writeAutoStartEnabled(bool enable) {
+    if (enable) {
+        const std::wstring executable = currentExecutablePath();
+        if (executable.empty()) return false;
+
+        const std::wstring command = L"\"" + executable + L"\"";
+        HKEY key = nullptr;
+        if (RegCreateKeyExW(HKEY_CURRENT_USER, kRunKey, 0, nullptr, 0,
+                            KEY_SET_VALUE, nullptr, &key, nullptr) !=
+            ERROR_SUCCESS) {
+            return false;
+        }
+
+        const LSTATUS status = RegSetValueExW(
+            key, kRunValue, 0, REG_SZ,
+            reinterpret_cast<const BYTE*>(command.c_str()),
+            static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t)));
+        RegCloseKey(key);
+        return status == ERROR_SUCCESS;
+    }
+
+    HKEY key = nullptr;
+    const LSTATUS opened = RegOpenKeyExW(HKEY_CURRENT_USER, kRunKey, 0,
+                                         KEY_SET_VALUE, &key);
+    if (opened == ERROR_FILE_NOT_FOUND) return true;
+    if (opened != ERROR_SUCCESS) return false;
+
+    const LSTATUS status = RegDeleteValueW(key, kRunValue);
+    RegCloseKey(key);
+    return status == ERROR_SUCCESS || status == ERROR_FILE_NOT_FOUND;
+}
+
+}  // namespace
 
 App& App::instance() {
     static App app;
@@ -181,6 +260,10 @@ void App::showTrayMenu() {
     AppendMenuW(menu, MF_STRING | (pins_.empty() ? MF_GRAYED : MF_ENABLED),
                 kCmdCloseAll, L"关闭全部贴图");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(menu,
+                MF_STRING | (isAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
+                kCmdAutoStart, L"开机自启动");
+    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, kCmdExit, L"退出");
 
     POINT cursor{};
@@ -211,11 +294,32 @@ void App::handleCommand(UINT command) {
         case kCmdCloseAll:
             closeAllPins();
             break;
+        case kCmdAutoStart:
+            toggleAutoStart();
+            break;
         case kCmdExit:
             shutdown();
             break;
         default:
             break;
+    }
+}
+
+bool App::isAutoStartEnabled() const {
+    std::wstring command;
+    return readAutoStartCommand(command) && !command.empty();
+}
+
+bool App::setAutoStart(bool enable) {
+    return writeAutoStartEnabled(enable);
+}
+
+void App::toggleAutoStart() {
+    const bool enable = !isAutoStartEnabled();
+    if (!setAutoStart(enable)) {
+        MessageBoxW(nullptr,
+                    L"无法修改开机自启动设置，请检查当前用户注册表权限。",
+                    kAppTitle, MB_OK | MB_ICONERROR);
     }
 }
 

@@ -22,6 +22,7 @@ Windows 10/11 screenshot-to-pin utility, written in C++23 with Win32 and GDI+.
 - `Ctrl + 左键拖四边/四角`裁剪（可在原截图范围内恢复）
 - 贴图只有方向性阴影（顶部淡、底部有接触阴影），没有边框线
 - 右键菜单：复制图片 / 另存为 PNG / 关闭 / 关闭全部
+- 托盘右键菜单可开关开机自启动（HKCU Run，不需要管理员权限）
 - 托盘图标与菜单、单实例、PerMonitorV2、多显示器
 
 ## 使用
@@ -38,6 +39,7 @@ Windows 10/11 screenshot-to-pin utility, written in C++23 with Win32 and GDI+.
 | `Ctrl + 左键拖边缘` | 裁剪该边缘 |
 | 右键贴图 | 复制 / 另存 PNG / 关闭 |
 | `Ctrl+C` / `Ctrl+S` | 贴图获得焦点时复制 / 另存 PNG |
+| 托盘右键 → 开机自启动 | 勾选/取消当前用户登录时启动 |
 
 > Windows 自带的截图热键是 `Win+Shift+S`，但 Win 组合会被系统截获。这里使用 `Alt+Shift+S`，实测不会触发输入法布局切换；个别机器若仍把 `Alt+Shift` 用作输入法切换，可用托盘菜单截图。
 
@@ -96,6 +98,7 @@ LICENSE
 - **变换模型**：`source image + crop rect + scale + screen rect`。缩放时固定光标下的图像点；裁剪在源像素坐标里计算，再按 `scale` 反推屏幕边缘，避免连续拖动累积误差。
 - **剪贴板 / PNG**：自底向上 24bpp `CF_DIB`；PNG 使用 GDI+ encoder。
 - **热键 / 托盘**：`RegisterHotKey` + `MOD_NOREPEAT`；注册失败用托盘气泡提示。托盘宿主是一个 1×1 的屏幕外可见窗口，这样弹出菜单能拿到前台焦点，`Esc`/点击外部可以正常关闭；同时处理 Explorer 重启后的 `TaskbarCreated` 消息。
+- **开机自启动**：在 `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run` 写入 `ScreenPin` 值，命令是带引号的当前 exe 路径；只影响当前用户，无需管理员权限。
 
 ## 已知限制
 
@@ -106,6 +109,7 @@ LICENSE
 - 缩放使用 GDI+ 双三次采样，极大放大时仍是像素插值，不适合当图片查看器。
 - 贴图阴影固定 24 DIP 边距，不随贴图尺寸缩放。
 - 透明度、缩放比例、位置不会持久化，退出后不保留。
+- 移动 exe 文件后，注册表里的自启动路径会失效，需要重新勾选“开机自启动”。
 - 截图不包含鼠标指针。
 - 调试：设置环境变量 `SCREENPIN_LOG=1` 后，关键事件追加到 `%TEMP%\ScreenPin.log`；默认不写日志。
 
