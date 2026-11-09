@@ -1,0 +1,18 @@
+# Build output
+build/
+dist/
+
+# Visual Studio / MSVC
+.vs/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# Local logs and scratch files
+*.log
